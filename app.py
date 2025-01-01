@@ -115,8 +115,6 @@ def encode_message(image_path, message):
 
     for i in range(1, height // 4 + 1):
         for j in range(1, width // 4 + 1):
-            if j == width // 4 or i == height // 4:
-                continue
             for channel in range(3):  # Loop through all channels
                 # Extract 4x4 block
                 block = I2[4*i-4:4*i, 4*j-4:4*j, channel]
@@ -132,15 +130,15 @@ def encode_message(image_path, message):
 
                 # Get current message bit
                 if idx < len(Emp):
-                    if Emp[idx] == '0':
+                    if Emp[idx] == '1':
                         S[3, 3] = 0
-                    elif Emp[idx] == '1':
-                        if s[3] <= 1e-3:
+                    elif Emp[idx] == '0':
+                        if s[3] <= 1e-6:
                             S[3, 3] = s[2] / 5
-                            if s[2] <= 1e-3:
+                            if s[2] <= 1e-6:
                                 S[2, 2] = s[1] / 5
                                 S[3, 3] = S[2, 2] / 5
-                                if s[1] <= 1e-3:
+                                if s[1] <= 1e-6:
                                     S[1, 1] = s[0] / 5
                                     S[2, 2] = S[1, 1] / 5
                                     S[3, 3] = S[2, 2] / 5
@@ -168,29 +166,33 @@ def decode_message(encoded_image):
     height, width = encoded_image.shape[:2]
     NewM = []
 
-    isEnd = False
+    #isEnd = False
+    #cnt = 0
+    #blck = 0
     for i in range(1, height // 4 + 1):
         for j in range(1, width // 4 + 1):
-            if j == width // 4 or i == height // 4:
-                continue
             for channel in range(3):
                 block = encoded_image[4*i-4:4*i, 4*j-4:4*j, channel]
-                
                 if block.shape[0] != 4 or block.shape[1] != 4:
                     continue
 
                 _, s, _ = np.linalg.svd(block)
-
-                if np.abs(s[3]) <= 1e-6:
-                    NewM.append('0')
-                else:
+                if np.abs(s[3]) <= 2e-7 - 5e-8:
                     NewM.append('1')
+                else:
+                    NewM.append('0')
+                #cnt += 1
 
                 # Check for termination pattern (end marker)
                 #if len(NewM) >= 8 and ''.join(NewM[-8:]) == '00000010':
                     #NewM = NewM[:-8]  # Remove the end marker
                     #isEnd = True
                     #break
+                #if cnt % 8 == 0:
+                    #blck += 1
+                    #if(blck < 1000):
+                        #print("last 8 bits from 8 bits:", chr(int(''.join(NewM[-8:]), 2)))
+                        #print("position of height and weight:", i*4-4, j*4-4)
             #if isEnd:
                 #break
         #if isEnd:
@@ -199,16 +201,26 @@ def decode_message(encoded_image):
 
     # Convert binary back to message
     message = ""
+    invalid_count = 0  # Counter for consecutive invalid characters
+
     for k in range(0, len(NewM) - 7, 8):
         try:
+            # Extract the next 8 bits
             b = ''.join(NewM[k:k+8])
             a = int(b, 2)
             l = chr(a)
-            if (not l.isprintable() or not (32 <= a <= 126)) and a != 10: # 10 for newline
-                break
-            message += l
+            
+            # Check if the character is invalid
+            if (not l.isprintable() or not (32 <= a <= 126)) and a != 10:  # 10 for newline
+                invalid_count += 1
+                if invalid_count >= 3:
+                    break
+            else:
+                invalid_count = 0  # Reset counter if character is valid
+                message += l
         except:
             break
+
     return message
 
 def save_image(image, path, format="TIFF"):
@@ -364,16 +376,16 @@ def detect_objects():
             if cls_name == obj_class:
                 x1, y1, x2, y2 = box.xyxy[0].cpu().numpy()
                 x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
-                # Adjust to nearest multiple of 19
-                x1_adj = adjust_to_nearest_multiple(x1, 19, W)
-                y1_adj = adjust_to_nearest_multiple(y1, 19, H)
-                x2_adj = adjust_to_nearest_multiple(x2, 19, W)
-                y2_adj = adjust_to_nearest_multiple(y2, 19, H)
+                # Adjust to nearest multiple of 12
+                x1_adj = adjust_to_nearest_multiple(x1, 12, W)
+                y1_adj = adjust_to_nearest_multiple(y1, 12, H)
+                x2_adj = adjust_to_nearest_multiple(x2, 12, W)
+                y2_adj = adjust_to_nearest_multiple(y2, 12, H)
                 # Ensure that adjusted coordinates are valid
                 if x1_adj >= x2_adj:
-                    x2_adj = min(x1_adj + 19, W)
+                    x2_adj = min(x1_adj + 12, W)
                 if y1_adj >= y2_adj:
-                    y2_adj = min(y1_adj + 19, H)
+                    y2_adj = min(y1_adj + 12, H)
                 detections.append({
                     'class': cls_name,
                     'x1': x1_adj,
