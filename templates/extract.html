@@ -1,0 +1,42 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<h2 class="mb-4">Extract Data from Image</h2>
+
+<div class="card card-body mb-4">
+  <form id="extract-upload-form" class="mb-3">
+    <div class="form-group">
+      <label for="extract-image">Upload Stego Image (PNG or TIFF)</label>
+      <input type="file" class="form-control-file" id="extract-image" name="image" accept="image/png, image/tiff, image/tif" required>
+    </div>
+    <button type="submit" class="btn btn-primary">Upload</button>
+  </form>
+</div>
+
+<div class="card card-body mb-4" id="extract-detection-section" style="display:none;">
+  <form id="extract-detect-form">
+    <div class="form-group">
+      <label for="extract-object-class">Select Object to Detect:</label>
+      <select class="form-control" id="extract-object-class" required>
+        {% for obj in object_classes %}
+        <option value="{{ obj }}">{{ obj }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <button type="submit" class="btn btn-primary">Detect Objects</button>
+  </form>
+</div>
+
+<div class="card card-body" id="extract-results" style="display:none;">
+  <div class="row">
+    <div class="col-md-6">
+      <h5>Stego Image</h5>
+      <img id="extract-detected-image" src="#" alt="Detected" class="img-fluid border">
+    </div>
+    <div class="col-md-6">
+      <h5>Extracted Data</h5>
+      <p id="extracted-data" style="white-space: pre-wrap; background:#f8f9fa; padding:10px; border:1px solid #ddd;"></p>
+    </div>
+  </div>
+</div>
+{% endblock %}
